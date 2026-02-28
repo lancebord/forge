@@ -1,4 +1,4 @@
-use crate::config::{self, ConfigCommand, TEMP_CONFIG_PATH, create_config};
+use crate::config::{self, Config, ConfigCommand, TEMP_CONFIG_PATH, create_config};
 use crate::util::{dir_size, get_editor, open_in_editor, pull_repo, yn_prompt};
 use git2::Repository;
 use std::fs;
@@ -72,7 +72,7 @@ impl Action {
             Action::List => list(),
             Action::Search { term } => Ok(search(term)),
             Action::Clean { packages } => clean(packages),
-            Action::Show { package } => Ok(show(package)),
+            Action::Show { package } => show(package),
             Action::Version => Ok(version()),
         }
     }
@@ -374,8 +374,11 @@ fn clean(packages: Vec<String>) -> Result<(), String> {
     Ok(())
 }
 
-fn show(package: String) {
-    println!("showing {}", package);
+fn show(package: String) -> Result<(), String> {
+    let config_path = PathBuf::from(BASE_CONFIG_PATH).join(format!("{package}.toml"));
+    let config = Config::new(&config_path).ok_or("config not found".to_string())?;
+    config.log_config();
+    Ok(())
 }
 
 fn version() {

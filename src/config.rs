@@ -43,6 +43,33 @@ impl Config {
         let config: Config = toml::from_str(&contents).expect("failed to parse config");
         Some(config)
     }
+
+    pub fn log_config(self) {
+        if let Some(update) = &self.update {
+            println!("update: {}", update);
+        }
+
+        if let Some(deps) = &self.dependencies {
+            println!("dependencies: {:?}", deps);
+        }
+
+        if let Some(hooks) = &self.hooks {
+            println!("hooks:");
+
+            for (name, value) in [
+                ("build", &hooks.build),
+                ("install", &hooks.install),
+                ("uninstall", &hooks.uninstall),
+                ("post_install", &hooks.post_install),
+                ("post_uninstall", &hooks.post_uninstall),
+                ("clean", &hooks.clean),
+            ] {
+                if let Some(val) = value {
+                    println!("  {}: {}", name, val);
+                }
+            }
+        }
+    }
 }
 
 pub fn create_config(package: &str) -> Result<(), String> {
