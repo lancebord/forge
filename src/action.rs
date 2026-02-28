@@ -195,14 +195,21 @@ fn remove(packages: Vec<String>) -> Result<(), String> {
 }
 
 fn list() -> Result<(), String> {
-    for entry in fs::read_dir(BASE_CONFIG_PATH)
+    if !nix::unistd::geteuid().is_root() {
+        return Err("list must be run as root".to_string());
+    }
+
+    for entry in fs::read_dir(BASE_REPO_PATH)
         .map_err(|e| format!("failed to iterate package directory: {}", e))?
     {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
-        if path.is_file() {
+        if path.is_dir() {
+            let oid = util::get_commit_hash(&path)
+                .map_err(|e| format!("failed to get commit hash: {e}"))?;
+            let oid = oid.as_str().unwrap();
             if let Some(stem) = path.file_stem() {
-                println!("{}", stem.to_string_lossy());
+                println!("{} ({})", stem.to_string_lossy(), oid);
             }
         }
     }

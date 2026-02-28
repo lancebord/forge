@@ -1,4 +1,4 @@
-use git2::{Cred, FetchOptions, RemoteCallbacks, Repository, build::CheckoutBuilder};
+use git2::{Buf, Cred, FetchOptions, RemoteCallbacks, Repository, build::CheckoutBuilder};
 use std::env;
 use std::fs;
 use std::io;
@@ -69,6 +69,14 @@ pub fn dir_size(path: &Path) -> std::io::Result<u64> {
         }
     }
     Ok(size)
+}
+
+pub fn get_commit_hash(path: &Path) -> Result<Buf, git2::Error> {
+    let repo = Repository::open(path)?;
+    let head = repo.head()?;
+
+    let commit = head.peel_to_commit()?;
+    Ok(repo.find_object(commit.id(), None)?.short_id()?)
 }
 
 pub fn get_editor() -> String {
@@ -147,11 +155,9 @@ pub fn yn_prompt(prompt: &str) -> bool {
     print!("{} [y/n]: ", prompt);
     io::stdout().flush().unwrap();
 
-    // Read input from user
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
 
-    // Normalize input
     let input = input.trim().to_lowercase();
 
     match input.as_str() {
