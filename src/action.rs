@@ -115,6 +115,7 @@ fn add(url: &str) -> Result<(), String> {
         config::run_config_command(&config_path, &clone_path, ConfigCommand::Build)?;
         println!("Installing...");
         config::run_config_command(&config_path, &clone_path, ConfigCommand::Install)?;
+        config::run_config_command(&config_path, &clone_path, ConfigCommand::PostInstall)?;
     }
 
     Ok(())
@@ -185,6 +186,7 @@ fn remove(packages: Vec<String>) -> Result<(), String> {
     if util::yn_prompt("Proceed with removal?") {
         for (name, path, cfg_path) in package_paths {
             config::run_config_command(&cfg_path, &path, ConfigCommand::Uninstall)?;
+            config::run_config_command(&cfg_path, &path, ConfigCommand::PostUninstall)?;
             fs::remove_dir_all(&path).map_err(|e| format!("failed to remove {}: {}", name, e))?;
             fs::remove_file(&cfg_path).map_err(|e| format!("failed to remove {}: {}", name, e))?;
             println!("Removed {}", name);
