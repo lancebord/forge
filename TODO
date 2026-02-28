@@ -1,11 +1,5 @@
-Make a forge user and make it own relevant paths
-
+branch in config
+hash in config
 Add config command to set forge's values like the editor
-Implement update
-Implement upgrade
-Implement Autoremove
-Implement List
 Implement Search
-Implement Clean
-Implement Show
-Make remove drop the config as well
+make helper function for collecting package info

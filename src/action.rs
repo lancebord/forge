@@ -11,7 +11,6 @@ pub enum Action {
     Add { url: String },
     Update,
     Upgrade { packages: Vec<String> },
-    Autoremove,
     Remove { packages: Vec<String> },
     List,
     Search { term: String },
@@ -34,7 +33,6 @@ impl Action {
                 let packages = args[2..].to_vec();
                 Ok(Action::Upgrade { packages })
             }
-            "autoremove" => Ok(Action::Autoremove),
             "remove" => {
                 let packages = args[2..].to_vec();
 
@@ -67,7 +65,6 @@ impl Action {
             Action::Add { url } => add(url.as_str()),
             Action::Update => update(),
             Action::Upgrade { packages } => upgrade(packages),
-            Action::Autoremove => Ok(autoremove()),
             Action::Remove { packages } => remove(packages),
             Action::List => list(),
             Action::Search { term } => Ok(search(term)),
@@ -235,10 +232,6 @@ fn upgrade(packages: Vec<String>) -> Result<(), String> {
     }
 
     Ok(())
-}
-
-fn autoremove() {
-    println!("autoremoving");
 }
 
 fn remove(packages: Vec<String>) -> Result<(), String> {
