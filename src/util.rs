@@ -1,4 +1,4 @@
-use git2::{Buf, Cred, FetchOptions, RemoteCallbacks, Repository, build::CheckoutBuilder};
+use git2::{Buf, Cred, FetchOptions, Oid, RemoteCallbacks, Repository, build::CheckoutBuilder};
 use std::env;
 use std::fs;
 use std::io;
@@ -71,7 +71,15 @@ pub fn dir_size(path: &Path) -> std::io::Result<u64> {
     Ok(size)
 }
 
-pub fn get_commit_hash(path: &Path) -> Result<Buf, git2::Error> {
+pub fn get_commit_hash_full(path: &Path) -> Result<Oid, git2::Error> {
+    let repo = Repository::open(path)?;
+    let head = repo.head()?;
+
+    let commit = head.peel_to_commit()?;
+    Ok(commit.id())
+}
+
+pub fn get_commit_hash_short(path: &Path) -> Result<Buf, git2::Error> {
     let repo = Repository::open(path)?;
     let head = repo.head()?;
 
@@ -83,6 +91,18 @@ pub fn get_editor() -> String {
     env::var("VISUAL")
         .or_else(|_| env::var("EDITOR"))
         .unwrap_or_else(|_| "nano".to_string())
+}
+
+pub fn get_remote_url(path: &Path) -> Result<String, git2::Error> {
+    let repo = Repository::open(path)?;
+
+    let remote = repo.find_remote("origin")?;
+
+    if let Some(url) = remote.url() {
+        Ok(url.to_string())
+    } else {
+        Err(git2::Error::from_str("Remote 'origin' has no URL"))
+    }
 }
 
 pub fn open_in_editor(editor: &str, file: &str) -> Result<(), String> {
@@ -110,7 +130,7 @@ pub fn print_collected_packages(packages: &PackageList, message: &str) {
     );
 }
 
-pub fn pull_repo(path: &Path) -> Result<bool, git2::Error> {
+pub fn pull_repo(path: &Path) -> Result<(), git2::Error> {
     let repo = Repository::open(path)?;
 
     let head = repo.head()?;
@@ -140,13 +160,10 @@ pub fn pull_repo(path: &Path) -> Result<bool, git2::Error> {
         reference.set_target(fetch_commit.id(), "Fast-Forward")?;
         repo.set_head(&refname)?;
         repo.checkout_head(Some(CheckoutBuilder::default().force()))?;
-        Ok(true)
-    } else if analysis.is_up_to_date() {
-        Ok(false)
-    } else {
+    } else if !analysis.is_up_to_date() {
         println!("Non fast-forward merge required (manual merge needed).");
-        Ok(false)
     }
+    Ok(())
 }
 
 pub fn yn_prompt(prompt: &str) -> bool {

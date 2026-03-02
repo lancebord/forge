@@ -1,4 +1,5 @@
 use crate::config::{self, Config, ConfigCommand, TEMP_CONFIG_PATH};
+use crate::lock::{self, Lockfile, Package};
 use crate::util::{self, BASE_CONFIG_PATH, BASE_REPO_PATH, PackageList};
 use git2::Repository;
 use std::fs;
@@ -112,6 +113,17 @@ fn add(url: &str) -> Result<(), String> {
         config::run_config_command(&config_path, &clone_path, ConfigCommand::PostInstall)?;
     }
 
+    // only add to lockfile if installed
+    let oid = util::get_commit_hash_full(&clone_path)
+        .map_err(|e| format!("could not get commit hash: {e}"))?;
+
+    let mut lockfile = Lockfile::new();
+    lockfile.update_pkg(Package {
+        name: repo_name.to_string(),
+        source: url.to_string(),
+        checksum: oid.to_string(),
+    })?;
+
     Ok(())
 }
 
@@ -123,8 +135,19 @@ fn update() -> Result<(), String> {
     let package_paths = util::collect_packages()?;
 
     let mut update_pkgs: PackageList = vec![];
+    let mut lockfile = Lockfile::new();
     for (name, path, config_path) in package_paths {
-        if util::pull_repo(&path).map_err(|e| format!("failed to update repo: {e}"))? {
+        util::pull_repo(&path).map_err(|e| format!("failed to update repo: {e}"))?;
+        let oid = util::get_commit_hash_full(&path)
+            .map_err(|e| format!("could not get commit hash: {e}"))?;
+        let url = util::get_remote_url(&path)
+            .map_err(|e| format!("failed to get url for remote origin: {e}"))?;
+        let p = Package {
+            name: name.clone(),
+            source: url,
+            checksum: oid.to_string(),
+        };
+        if lockfile.out_of_date(p) {
             update_pkgs.push((name, path, config_path));
         }
     }
@@ -135,6 +158,17 @@ fn update() -> Result<(), String> {
             for (name, path, cfg_path) in update_pkgs {
                 config::run_config_command(&cfg_path, &path, ConfigCommand::Build)?;
                 config::run_config_command(&cfg_path, &path, ConfigCommand::Install)?;
+
+                let oid = util::get_commit_hash_full(&path)
+                    .map_err(|e| format!("could not get commit hash: {e}"))?;
+                let url = util::get_remote_url(&path)
+                    .map_err(|e| format!("failed to get url for remote origin: {e}"))?;
+                lockfile.update_pkg(lock::Package {
+                    name: name.clone(),
+                    source: url,
+                    checksum: oid.to_string(),
+                })?;
+
                 println!("Upgraded {}", name);
             }
         }
@@ -189,7 +223,7 @@ fn list() -> Result<(), String> {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         if path.is_dir() {
-            let oid = util::get_commit_hash(&path)
+            let oid = util::get_commit_hash_short(&path)
                 .map_err(|e| format!("failed to get commit hash: {e}"))?;
             let oid = oid.as_str().unwrap();
             if let Some(stem) = path.file_stem() {

@@ -5,6 +5,7 @@ use crate::config::TEMP_CONFIG_PATH;
 
 mod action;
 mod config;
+mod lock;
 mod util;
 
 fn main() {
