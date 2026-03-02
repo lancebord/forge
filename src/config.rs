@@ -17,7 +17,6 @@ pub enum ConfigCommand {
 #[derive(Deserialize)]
 pub struct Config {
     pub update: Option<String>,
-    pub dependencies: Option<Vec<String>>,
     pub hooks: Option<Hooks>,
 }
 
@@ -47,10 +46,6 @@ impl Config {
     pub fn log_config(self) {
         if let Some(update) = &self.update {
             println!("update: {}", update);
-        }
-
-        if let Some(deps) = &self.dependencies {
-            println!("dependencies: {:?}", deps);
         }
 
         if let Some(hooks) = &self.hooks {
@@ -85,8 +80,7 @@ pub fn create_config(package: &str) -> Result<(), String> {
 
     let template = format!(
         r#"# {package} configuration
-update = "tagged" # no | live | tagged
-dependencies = []
+update = "live" # no | live | tagged
 
 [hooks]
 build = "make"

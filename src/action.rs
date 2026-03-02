@@ -184,7 +184,6 @@ fn remove(packages: Vec<String>) -> Result<(), String> {
         return Err("remove must be run as root".to_string());
     }
 
-    println!("Checking dependencies...\n");
     let package_paths: PackageList = util::collect_named_packages(packages)?;
 
     util::print_collected_packages(&package_paths, "Packages to remove");
