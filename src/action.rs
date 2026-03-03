@@ -137,18 +137,43 @@ fn update() -> Result<(), String> {
     let mut update_pkgs: PackageList = vec![];
     let mut lockfile = Lockfile::new();
     for (name, path, config_path) in package_paths {
-        util::pull_repo(&path).map_err(|e| format!("failed to update repo: {e}"))?;
-        let oid = util::get_commit_hash_full(&path)
-            .map_err(|e| format!("could not get commit hash: {e}"))?;
-        let url = util::get_remote_url(&path)
-            .map_err(|e| format!("failed to get url for remote origin: {e}"))?;
-        let p = Package {
-            name: name.clone(),
-            source: url,
-            checksum: oid.to_string(),
-        };
-        if lockfile.out_of_date(p) {
-            update_pkgs.push((name, path, config_path));
+        let config = Config::new(&config_path).ok_or("config not found".to_string())?;
+        if let Some(u) = config.update {
+            match u.as_str() {
+                "live" => {
+                    util::pull_repo(&path).map_err(|e| format!("failed to update repo: {e}"))?;
+                    let oid = util::get_commit_hash_full(&path)
+                        .map_err(|e| format!("could not get commit hash: {e}"))?;
+                    let url = util::get_remote_url(&path)
+                        .map_err(|e| format!("failed to get url for remote origin: {e}"))?;
+                    let p = Package {
+                        name: name.clone(),
+                        source: url,
+                        checksum: oid.to_string(),
+                    };
+                    if lockfile.out_of_date(p) {
+                        update_pkgs.push((name, path, config_path));
+                    }
+                }
+                "tagged" => {
+                    util::pull_latest_tag(&path)
+                        .map_err(|e| format!("failed to update repo: {e}"))?;
+                    let oid = util::get_commit_hash_full(&path)
+                        .map_err(|e| format!("could not get commit hash: {e}"))?;
+                    let url = util::get_remote_url(&path)
+                        .map_err(|e| format!("failed to get url for remote origin: {e}"))?;
+                    let p = Package {
+                        name: name.clone(),
+                        source: url,
+                        checksum: oid.to_string(),
+                    };
+                    if lockfile.out_of_date(p) {
+                        update_pkgs.push((name, path, config_path));
+                    }
+                }
+                "none" => continue,
+                e => return Err(format!("unknown update mode {e}")),
+            }
         }
     }
 

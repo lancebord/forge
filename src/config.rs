@@ -80,7 +80,7 @@ pub fn create_config(package: &str) -> Result<(), String> {
 
     let template = format!(
         r#"# {package} configuration
-update = "live" # no | live | tagged
+update = "live" # none | live | tagged
 
 [hooks]
 build = "make"
